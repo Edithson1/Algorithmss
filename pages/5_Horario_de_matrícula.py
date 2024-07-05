@@ -214,6 +214,7 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
         # Aplicar mutación
         poblacion = mutacion(nuevos_cromosomas_crossover, 0.01)
     return poblacion
+
 def main():
     if autenticacion_usuario():
         st.title("Horario de Matrícula")
@@ -292,7 +293,11 @@ def main():
             for _, row in df_cromosoma.iterrows():
                 curso = row['Curso']
                 docente = row['Docente']
-                nombre_curso = df_cursos.loc[df_cursos['Código'] == curso, 'Nombre'].values[0]
+                nombre_curso = df_cursos.loc[df_cursos['Código'] == curso, 'Nombre'].values
+                if len(nombre_curso) > 0:
+                    nombre_curso = nombre_curso[0]
+                else:
+                    nombre_curso = "Nombre de curso no encontrado"
                 hora_teoria = row['Hora de Teoría']
                 hora_practica = row['Hora de Práctica']
                 aula_teoria = row['Aula de Teoría']
