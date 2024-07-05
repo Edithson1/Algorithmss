@@ -270,7 +270,7 @@ def main():
             df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
 
             # Ajustar los datos de las horas
-            for id, filas indf_cromosoma.iterrows():
+            for id, filas in df_cromosoma.iterrows():
                 id_periodo1 = filas['Hora de Teoría']
                 filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo1].squeeze()
                 hora_de_inicio = filaHoraT['Hora_Inicio']
