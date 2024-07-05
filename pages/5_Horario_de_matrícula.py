@@ -45,7 +45,7 @@ class GeneradorDeCromosomas:
             aulaTeoria = self.aula(curso, semest, ambientes, claseT)
             aulaPractica = self.aula(curso, semest, ambientes, claseP)
             docente = profesores_por_semestre.get(curso)
-            self.genes[semest[curso][0]] = [docente, aulaTeoria, aulaPractica, ra.randint(1, 42), ra.randint(1, 42)]
+            self.genes[curso] = [docente, aulaTeoria, aulaPractica, ra.randint(1, 42), ra.randint(1, 42)]
 
 # Función para generar la población inicial
 def generar_poblacion_inicial(tamano_poblacion, cursos, profesores_por_semestre, ambientes):
