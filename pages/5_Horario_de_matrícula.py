@@ -162,7 +162,6 @@ def main():
         profesores_por_semestre_CodNom = df_profesores.set_index('Código')['Profesor'].to_dict()
 
         if "nombre" in st.session_state and "ciclo_actual" in st.session_state and "cursos_aprobados" in st.session_state:
-            st.write(f"Cursos que aprobaste: {st.session_state['cursos_aprobados']}")
             st.write(f"Ciclo actual: {st.session_state['ciclo_actual']}")
 
             ciclo_actual = st.session_state['ciclo_actual']
@@ -191,6 +190,10 @@ def main():
                 hora_de_inicio = filaHoraT['Hora_Inicio']
                 dia = filaHoraT['Día']
                 df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+            # Mostrar lista de cursos que llevará el estudiante
+                        st.sidebar.markdown("### Cursos que llevarás en el ciclo actual:")
+            for index, row in df_cromosoma.iterrows():
+                st.sidebar.write(f"- **{row['Curso']}**: {row['Docente']}")
 
             # Visualizar el horario
             visualizar_horario(df_cromosoma, df_periodos)
