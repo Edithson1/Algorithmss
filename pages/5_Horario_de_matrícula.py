@@ -200,11 +200,13 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
         mejores = seleccionar_mejores(valores_fitness)
 
         # Obtener cromosomas seleccionados
-        cromosomas_seleccionados = obtener_cromosomas_seleccionados(mejores, poblacion)
-
+        cromosomas_selecccionados = obtener_cromosomas_seleccionados(mejores, poblacion)
         # Verificar que el número de cromosomas seleccionados sea par
+        if len(cromosomas_seleccionados) < 2:
+            raise ValueError("Número de cromosomas seleccionados es menor que 2. Asegúrese de que la población inicial sea suficiente.")
         if len(cromosomas_seleccionados) % 2 != 0:
             cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[0]] = cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[1]]
+
         # Aplicar crossover
         nuevos_cromosomas_crossover = crossover(cromosomas_seleccionados)
 
@@ -312,4 +314,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
