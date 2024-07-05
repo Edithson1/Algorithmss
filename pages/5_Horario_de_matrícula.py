@@ -289,7 +289,7 @@ def main():
 
             horario_detallado = []
 
-            for _, row indf_cromosoma.iterrows():
+            for _, row in df_cromosoma.iterrows():
                 curso = row['Curso']
                 docente = row['Docente']
                 nombre_curso = df_cursos.loc[df_cursos['Código'] == curso, 'Nombre'].values
