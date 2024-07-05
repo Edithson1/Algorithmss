@@ -3,6 +3,7 @@ import pandas as pd
 from login import autenticacion_usuario
 import random as ra
 import plotly.express as px
+import os
 
 # Configuración de página
 st.set_page_config(
@@ -123,49 +124,68 @@ def visualizar_horario(df, periodos_df):
         title_x=0.5
     )
 
-    fig.show()
+    st.plotly_chart(fig)
 
 def main():
     if autenticacion_usuario():
         st.title("Horario de Matrícula")
-        if 'df' not in st.session_state:
-            st.error("Primero carga el Plan de Estudios")
-        else:
-            if "nombre" in st.session_state and "ciclo_actual" in st.session_state and "cursos_aprobados" in st.session_state:
-                st.write(f"Cursos que aprobaste: {st.session_state['cursos_aprobados']}")
-                st.write(f"Ciclo actual: {st.session_state['ciclo_actual']}")
 
-                # Cargar los datos necesarios
-                df = st.session_state['df']
-                ciclo_actual = st.session_state['ciclo_actual']
-                
-                # Filtrar los cursos del ciclo actual
-                cursos_ciclo_actual = df[df['Ciclo'] == ciclo_actual]
+        # Cargar los datos necesarios
+        file_path_cursos = os.path.join(os.path.dirname(__file__), 'CursosInformatica-Hito2.xlsx')
+        df_cursos = pd.read_excel(file_path_cursos, sheet_name="Hito2")
 
-                # Generar cromosomas para el ciclo actual
-                crom = GeneradorDeCromosomas()
-                crom.cromosomas(cursos_ciclo_actual, profesores_por_semestre_CodNom, ambientes)
+        file_path_salones = os.path.join(os.path.dirname(__file__), 'ModelarSalones.xlsx')
+        df_salones = pd.read_excel(file_path_salones)
 
-                # Convertir los genes a un DataFrame
-                df_cromosoma = pd.DataFrame(crom.genes).T.reset_index()
-                df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
+        file_path_profesores = os.path.join(os.path.dirname(__file__), 'asignaturas_con_profesores.xlsx')
+        df_profesores = pd.read_excel(file_path_profesores)
 
-                # Ajustar los datos de las horas
-                for id, filas in df_cromosoma.iterrows():
-                    id_periodo1 = filas['Hora de Teoría']
-                    filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo1].squeeze()
-                    hora_de_inicio = filaHoraT['Hora_Inicio']
-                    dia = filaHoraT['Día']
-                    df_cromosoma.at[id, 'Hora de Teoría'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+        file_path_periodos = os.path.join(os.path.dirname(__file__), 'Asignaciones.xlsx')
+        df_periodos = pd.read_excel(file_path_periodos, sheet_name="Periodo")
 
-                    id_periodo2 = filas['Hora de Práctica']
-                    filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo2].squeeze()
-                    hora_de_inicio = filaHoraT['Hora_Inicio']
-                    dia = filaHoraT['Día']
-                    df_cromosoma.loc[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+        # Procesar datos de salones
+        aulas = df_salones[df_salones['Tipo'] == 'Aula'].set_index('Aulas').to_dict('index')
+        laboratorios = df_salones[df_salones['Tipo'] == 'Laboratorio'].set_index('Aulas').to_dict('index')
+        aulas_interactivas = df_salones[df_salones['Tipo'] == 'Aula Interactiva LID'].set_index('Aulas').to_dict('index')
+        auditorios = df_salones[df_salones['Tipo'] == 'Auditorio'].set_index('Aulas').to_dict('index')
+        ambientes = [aulas, laboratorios, aulas_interactivas, auditorios]
 
-                # Visualizar el horario
-                visualizar_horario(df_cromosoma, df_periodos)
+        # Procesar datos de profesores
+        profesores_por_semestre_CodNom = df_profesores.set_index('Código')['Profesor'].to_dict()
+
+        if "nombre" in st.session_state and "ciclo_actual" in st.session_state and "cursos_aprobados" in st.session_state:
+            st.write(f"Cursos que aprobaste: {st.session_state['cursos_aprobados']}")
+            st.write(f"Ciclo actual: {st.session_state['ciclo_actual']}")
+
+            ciclo_actual = st.session_state['ciclo_actual']
+            
+            # Filtrar los cursos del ciclo actual
+            cursos_ciclo_actual = df_cursos[df_cursos['Ciclo'] == ciclo_actual]
+
+            # Generar cromosomas para el ciclo actual
+            crom = GeneradorDeCromosomas()
+            crom.cromosomas(cursos_ciclo_actual.set_index('Código').T.to_dict('list'), profesores_por_semestre_CodNom, ambientes)
+
+            # Convertir los genes a un DataFrame
+            df_cromosoma = pd.DataFrame(crom.genes).T.reset_index()
+            df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
+
+            # Ajustar los datos de las horas
+            for id, filas in df_cromosoma.iterrows():
+                id_periodo1 = filas['Hora de Teoría']
+                filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo1].squeeze()
+                hora_de_inicio = filaHoraT['Hora_Inicio']
+                dia = filaHoraT['Día']
+                df_cromosoma.at[id, 'Hora de Teoría'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+
+                id_periodo2 = filas['Hora de Práctica']
+                filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo2].squeeze()
+                hora_de_inicio = filaHoraT['Hora_Inicio']
+                dia = filaHoraT['Día']
+                df_cromosoma.loc[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+
+            # Visualizar el horario
+            visualizar_horario(df_cromosoma, df_periodos)
 
     else:
         st.error("Debes iniciar sesión para ver el contenido.")
