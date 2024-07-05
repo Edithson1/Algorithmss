@@ -49,54 +49,143 @@ class GeneradorDeCromosomas:
 
 # Función para generar la población inicial
 def generar_poblacion_inicial(tamano_poblacion, cursos, profesores_por_semestre, ambientes):
-    poblacion = []
-    for _ in range(tamano_poblacion):
-        crom = GeneradorDeCromosomas()
-        crom.cromosomas(cursos, profesores_por_semestre, ambientes)
-        poblacion.append(crom)
-    return poblacion
+    conjunto_de_cromosomas = {}
+    for i in range(tamano_poblacion):
+        cromosoma = GeneradorDeCromosomas()
+        cromosoma.cromosomas(cursos, profesores_por_semestre, ambientes)
+        conjunto_de_cromosomas[i] = cromosoma.genes
+    return conjunto_de_cromosomas
 
 # Función de fitness
-def calcular_fitness(cromosoma):
-    penalizacion = 0
-    horarios = []
-    for curso, datos in cromosoma.genes.items():
-        if datos[3] in horarios or datos[4] in horarios:
-            penalizacion += 1
-        horarios.extend([datos[3], datos[4]])
-    return penalizacion
+def calcular_fitness(conjunto_de_cromosomas):
+    def determinar_dia(periodo):
+        if 0 <= periodo <= 7:
+            return 'Lunes'
+        elif 8 <= periodo <= 14:
+            return 'Martes'
+        elif 15 <= periodo <= 21:
+            return 'Miércoles'
+        elif 22 <= periodo <= 28:
+            return 'Jueves'
+        elif 29 <= periodo <= 35:
+            return 'Viernes'
+        elif 36 <= periodo <= 42:
+            return 'Sábado'
+        else:
+            return 'Desconocido'
+
+    penalizaciones = {
+        1: -15,
+        2: -5,
+        3: 0,
+        4: -50,
+        5: -1000,
+        6: -1000
+    }
+
+    def calcular_penalizacion_solapamientos(cromosoma):
+        periodos = []
+        for curso, datos in cromosoma.items():
+            periodos.extend(datos[-2:])
+        if len(periodos) != len(set(periodos)):
+            return -1000
+        return 0
+
+    def calcular_penalizacion_cantidad_de_clases(cromosoma):
+        contador_dias = {
+            'Lunes': 0,
+            'Martes': 0,
+            'Miércoles': 0,
+            'Jueves': 0,
+            'Viernes': 0,
+            'Sábado': 0
+        }
+        for curso, datos in cromosoma.items():
+            periodos = datos[-2:]
+            for periodo in periodos:
+                dia = determinar_dia(periodo)
+                if dia in contador_dias:
+                    contador_dias[dia] += 1
+        total_penalizacion_cantidad_de_clases = 0
+        for dia, cuenta in contador_dias.items():
+            if cuenta in penalizaciones:
+                total_penalizacion_cantidad_de_clases += penalizaciones[cuenta]
+        return total_penalizacion_cantidad_de_clases
+
+    def calcular_penalizacion_huecos(cromosoma):
+        periodos_por_dia = {
+            'Lunes': [],
+            'Martes': [],
+            'Miércoles': [],
+            'Jueves': [],
+            'Viernes': [],
+            'Sábado': []
+        }
+        for curso, datos in cromosoma.items():
+            periodos = datos[-2:]
+            for periodo in periodos:
+                dia = determinar_dia(periodo)
+                periodos_por_dia[dia].append(periodo)
+        penalizacion_total_huecos = 0
+        for dia, periodos in periodos_por_dia.items():
+            periodos.sort()
+            a = 0
+            penalizacion_huecos = 0
+            penalizacion_extensiones = 0
+            for i in range(len(periodos) - 1):
+                gap_size = periodos[i + 1] - periodos[i] - 1
+                if gap_size > 0:
+                    penalizacion_huecos += (-15 * a) - 15
+                    penalizacion_extensiones += -10 * gap_size
+                    a += 1
+            penalizacion_total_huecos += penalizacion_huecos + penalizacion_extensiones
+        return penalizacion_total_huecos
+
+    valores_fitness = {}
+    for cromosoma_id, cromosoma in conjunto_de_cromosomas.items():
+        penalizacion_solapamientos = calcular_penalizacion_solapamientos(cromosoma)
+        penalizacion_cantidad_clases = calcular_penalizacion_cantidad_de_clases(cromosoma)
+        penalizacion_huecos = calcular_penalizacion_huecos(cromosoma)
+
+        valor_fitness = penalizacion_solapamientos + penalizacion_cantidad_clases + penalizacion_huecos
+        valores_fitness[cromosoma_id] = valor_fitness
+
+    return valores_fitness
 
 # Selección de mejores cromosomas
 def seleccionar_mejores(valores_fitness):
-    valores_fitness.sort(key=lambda x: x[1])
-    return valores_fitness[:len(valores_fitness)//2]
+    valores_fitness_ordenados = dict(sorted(valores_fitness.items(), key=lambda item: item[1], reverse=True))
+    mitad = len(valores_fitness_ordenados) // 2
+    mitad_diccionario = dict(list(valores_fitness_ordenados.items())[:mitad])
+    return mitad_diccionario
 
 # Obtener cromosomas seleccionados
-def obtener_cromosomas_seleccionados(mejores, poblacion):
-    return [poblacion[i] for i, _ in mejores]
+def obtener_cromosomas_seleccionados(mitad_diccionario, conjunto_de_cromosomas):
+    cromosomas_seleccionados = {}
+    for cromosoma_id in mitad_diccionario.keys():
+        cromosomas_seleccionados[cromosoma_id] = conjunto_de_cromosomas[cromosoma_id]
+    return cromosomas_seleccionados
 
 # Crossover
-def crossover(cromosomas):
-    nuevos_cromosomas = []
-    for i in range(0, len(cromosomas), 2):
-        if i+1 < len(cromosomas):
-            padre1, padre2 = cromosomas[i], cromosomas[i+1]
-            hijo1_genes = {**padre1.genes, **padre2.genes}
-            hijo2_genes = {**padre2.genes, **padre1.genes}
-            hijo1 = GeneradorDeCromosomas()
-            hijo2 = GeneradorDeCromosomas()
-            hijo1.genes = hijo1_genes
-            hijo2.genes = hijo2_genes
-            nuevos_cromosomas.extend([hijo1, hijo2])
+def crossover(cromosomas_seleccionados):
+    nuevos_cromosomas = {}
+    ids = list(cromosomas_seleccionados.keys())
+    for i in range(0, len(ids), 2):
+        if i+1 < len(ids):
+            padre1, padre2 = cromosomas_seleccionados[ids[i]], cromosomas_seleccionados[ids[i+1]]
+            hijo1_genes = {**padre1, **padre2}
+            hijo2_genes = {**padre2, **padre1}
+            nuevos_cromosomas[ids[i]] = hijo1_genes
+            nuevos_cromosomas[ids[i+1]] = hijo2_genes
     return nuevos_cromosomas
 
 # Mutación
 def mutacion(cromosomas, tasa_mutacion):
-    for crom in cromosomas:
+    for crom in cromosomas.values():
         if ra.random() < tasa_mutacion:
-            curso = ra.choice(list(crom.genes.keys()))
-            crom.genes[curso][3] = ra.randint(1, 42)
-            crom.genes[curso][4] = ra.randint(1, 42)
+            curso = ra.choice(list(crom.keys()))
+            crom[curso][3] = ra.randint(1, 42)
+            crom[curso][4] = ra.randint(1, 42)
     return cromosomas
 
 # Algoritmo genético
@@ -105,26 +194,23 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
 
     for generacion in range(generaciones):
         # Calcular el fitness
-        valores_fitness = [(i, calcular_fitness(crom)) for i, crom in enumerate(poblacion)]
+        valores_fitness = calcular_fitness(poblacion)
 
         # Seleccionar los mejores
         mejores = seleccionar_mejores(valores_fitness)
 
-        # Convertirlos a diccionarios
+        # Obtener cromosomas seleccionados
         cromosomas_seleccionados = obtener_cromosomas_seleccionados(mejores, poblacion)
 
         # Verificar que el número de cromosomas seleccionados sea par
         if len(cromosomas_seleccionados) % 2 != 0:
-            cromosomas_seleccionados.append(cromosomas_seleccionados[0])
-
+            cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[0]] = cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[1]]
         # Aplicar crossover
         nuevos_cromosomas_crossover = crossover(cromosomas_seleccionados)
 
         # Aplicar mutación
         poblacion = mutacion(nuevos_cromosomas_crossover, 0.01)
-
     return poblacion
-
 def main():
     if autenticacion_usuario():
         st.title("Horario de Matrícula")
@@ -174,10 +260,10 @@ def main():
             poblacion_final = algoritmo_genetico(tamano_poblacion, generaciones, cursos_ciclo_actual.set_index('Código').T.to_dict('list'), profesores_por_semestre_CodNom, ambientes)
 
             # Seleccionar el mejor cromosoma (el primero de la lista final de población)
-            mejor_cromosoma = poblacion_final[0]
+            mejor_cromosoma = list(poblacion_final.values())[0]
 
             # Convertir los genes a un DataFrame
-            df_cromosoma = pd.DataFrame(mejor_cromosoma.genes).T.reset_index()
+            df_cromosoma = pd.DataFrame(mejor_cromosoma).T.reset_index()
             df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
 
             # Ajustar los datos de las horas
@@ -193,10 +279,13 @@ def main():
                 hora_de_inicio = filaHoraT['Hora_Inicio']
                 dia = filaHoraT['Día']
                 df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+
             # Mostrar el horario detallado en la pestaña principal
             st.write("### Horario del Ciclo Actual")
             st.write("Este es el horario generado para tus cursos del ciclo actual:")
+
             horario_detallado = []
+
             for _, row in df_cromosoma.iterrows():
                 curso = row['Curso']
                 docente = row['Docente']
@@ -223,3 +312,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
