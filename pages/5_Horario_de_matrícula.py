@@ -205,12 +205,12 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
 
         # Obtener cromosomas seleccionados
         cromosomas_seleccionados = obtener_cromosomas_seleccionados(mitad_diccionario, poblacion)
+
         # Verificar que el número de cromosomas seleccionados sea par
         if len(cromosomas_seleccionados) < 2:
             raise ValueError("Número de cromosomas seleccionados es menor que 2. Asegúrese de que la población inicial sea suficiente.")
         if len(cromosomas_seleccionados) % 2 != 0:
             cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[0]] = cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[1]]
-
         # Aplicar crossover
         nuevos_cromosomas_crossover = crossover(cromosomas_seleccionados)
 
@@ -221,6 +221,7 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
         if generacion == generaciones - 1:
             mejor_cromosoma_ultima_generacion = next(iter(cromosomas_seleccionados.values()))
     return poblacion, mejores_fitness, mejor_cromosoma_ultima_generacion
+
 def periodo_a_dia_hora(periodo):
     dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
     horas = ['07:00 - 09:00', '09:00 - 11:00', '11:00 - 13:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
@@ -230,7 +231,7 @@ def periodo_a_dia_hora(periodo):
 
     return dia, hora
 
-def crear_horario_dataframe(mejor_cromosoma):
+def crear_horario_dataframe(mejor_cromosoma, df_cursos):
     dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
     horas = ['07:00 - 09:00', '09:00 - 11:00', '11:00 - 13:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
 
@@ -242,10 +243,11 @@ def crear_horario_dataframe(mejor_cromosoma):
         profesor = datos[0]
         aula1, aula2 = datos[1], datos[2]
         periodo1, periodo2 = datos[3], datos[4]
+        nombre_curso = df_cursos.loc[df_cursos['Código'] == curso, 'Nombre'].values[0]
 
         for periodo, aula in [(periodo1, aula1), (periodo2, aula2)]:
             dia, hora = periodo_a_dia_hora(periodo)
-            info = f"{curso}\n{profesor}\n{aula}"
+            info = f"{curso}\n{nombre_curso}\n{profesor}\n{aula}"
 
             if pd.isna(df.at[hora, dia]):
                 df.at[hora, dia] = info
@@ -253,6 +255,50 @@ def crear_horario_dataframe(mejor_cromosoma):
                 df.at[hora, dia] += f"\n\n{info}"
 
     return df
+
+def formato_horario(df):
+    df = df.fillna('')
+
+    return df.style \
+        .set_properties(**{
+            'font-size': '12px',
+            'font-weight': 'bold',
+            'text-align': 'center',
+            'height': '100px',
+            'white-space': 'pre-wrap',
+            'border': '1px solid #ddd'
+        }) \
+        .set_table_styles([
+            {'selector': 'th', 'props': [
+                ('background-color', '#4a4a4a'),
+                ('color', 'white'),
+                ('font-weight', 'bold'),
+                ('border', '1px solid #ddd')
+            ]},
+            {'selector': 'td', 'props': [('padding', '8px')]},
+            {'selector': '', 'props': [
+                ('border-collapse', 'collapse'),
+                ('border', '1px solid #ddd'),
+                ('width', '100%')
+            ]},
+            {'selector': 'tbody tr:nth-child(even)', 'props': [
+                ('background-color', '#f9f9f9')
+            ]},
+            # Ajustar el ancho de la columna de horas
+            {'selector': 'th:first-child, td:first-child', 'props': [
+                ('width', '80px'),
+                ('max-width', '80px'),
+                ('min-width', '80px')
+            ]},
+            # Ajustar el ancho de las columnas de días
+            {'selector': 'th:not(:first-child), td:not(:first-child)', 'props': [
+                ('width', '16%'),
+                ('max-width', '16%'),
+                ('min-width', '16%')
+            ]}
+        ]) \
+        .apply(lambda x: ['background-color: #e6f3ff; color: black;' if x != '' else 'background-color: #f2f2f2; color: #888888;' for x in x], axis=1) \
+        .format(lambda v: v.replace('\n', '<br>'))
 
 def main():
     if autenticacion_usuario():
@@ -303,13 +349,16 @@ def main():
             poblacion_final, mejores_fitness, mejor_cromosoma = algoritmo_genetico(tamano_poblacion, generaciones, cursos_ciclo_actual.set_index('Código').T.to_dict('list'), profesores_por_semestre_CodNom, ambientes)
 
             # Crear el DataFrame del horario
-            df_horario = crear_horario_dataframe(mejor_cromosoma)
+            df_horario = crear_horario_dataframe(mejor_cromosoma, df_cursos)
+
+            # Aplicar el estilo al DataFrame
+            horario_estilizado = formato_horario(df_horario)
 
             # Mostrar el horario detallado en la pestaña principal
             st.write("### Horario del Ciclo Actual")
             st.write("Este es el horario generado para tus cursos del ciclo actual:")
 
-            st.dataframe(df_horario)
+            st.write(horario_estilizado.to_html(), unsafe_allow_html=True)
     else:
         st.error("Debes iniciar sesión para ver el contenido.")
 
