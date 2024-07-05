@@ -130,10 +130,14 @@ def main():
     if autenticacion_usuario():
         st.title("Horario de Matrícula")
 
+        # Verificar si el plan de estudios está cargado en la sesión
+        if 'df' not in st.session_state:
+            st.error("Primero carga el Plan de Estudios en la página 'Subir Plan de Estudios'")
+            return
+        
         # Cargar los datos necesarios
         try:
-            file_path_cursos = os.path.join(os.path.dirname(__file__), 'CursosInformatica-Hito2.xlsx')
-            df_cursos = pd.read_excel(file_path_cursos, sheet_name="Hito2")
+            df_cursos = st.session_state['df']
 
             file_path_salones = os.path.join(os.path.dirname(__file__), 'ModelarSalones.xlsx')
             df_salones = pd.read_excel(file_path_salones)
@@ -187,6 +191,7 @@ def main():
                 hora_de_inicio = filaHoraT['Hora_Inicio']
                 dia = filaHoraT['Día']
                 df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+
             # Visualizar el horario
             visualizar_horario(df_cromosoma, df_periodos)
 
