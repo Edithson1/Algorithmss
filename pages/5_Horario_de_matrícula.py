@@ -77,14 +77,15 @@ def obtener_cromosomas_seleccionados(mejores, poblacion):
 def crossover(cromosomas):
     nuevos_cromosomas = []
     for i in range(0, len(cromosomas), 2):
-        padre1, padre2 = cromosomas[i], cromosomas[i+1]
-        hijo1_genes = {**padre1.genes, **padre2.genes}
-        hijo2_genes = {**padre2.genes, **padre1.genes}
-        hijo1 = GeneradorDeCromosomas()
-        hijo2 = GeneradorDeCromosomas()
-        hijo1.genes = hijo1_genes
-        hijo2.genes = hijo2_genes
-        nuevos_cromosomas.extend([hijo1, hijo2])
+        if i+1 < len(cromosomas):
+            padre1, padre2 = cromosomas[i], cromosomas[i+1]
+            hijo1_genes = {**padre1.genes, **padre2.genes}
+            hijo2_genes = {**padre2.genes, **padre1.genes}
+            hijo1 = GeneradorDeCromosomas()
+            hijo2 = GeneradorDeCromosomas()
+            hijo1.genes = hijo1_genes
+            hijo2.genes = hijo2_genes
+            nuevos_cromosomas.extend([hijo1, hijo2])
     return nuevos_cromosomas
 
 # Mutación
@@ -110,6 +111,10 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
 
         # Convertirlos a diccionarios
         cromosomas_seleccionados = obtener_cromosomas_seleccionados(mejores, poblacion)
+
+        # Verificar que el número de cromosomas seleccionados sea par
+        if len(cromosomas_seleccionados) % 2 != 0:
+            cromosomas_seleccionados.append(cromosomas_seleccionados[0])
 
         # Aplicar crossover
         nuevos_cromosomas_crossover = crossover(cromosomas_seleccionados)
@@ -205,15 +210,16 @@ def main():
         if 'df' not in st.session_state:
             st.error("Primero carga el Plan de Estudios en la página 'Subir Plan de Estudios'")
             return
-        
         # Cargar los datos necesarios
         try:
             df_cursos = st.session_state['df']
 
             file_path_salones = os.path.join(os.path.dirname(__file__), 'ModelarSalones.xlsx')
             df_salones = pd.read_excel(file_path_salones)
+
             file_path_profesores = os.path.join(os.path.dirname(__file__), 'asignaturas_con_profesores.xlsx')
             df_profesores = pd.read_excel(file_path_profesores)
+
             file_path_periodos = os.path.join(os.path.dirname(__file__), 'Asignaciones.xlsx')
             df_periodos = pd.read_excel(file_path_periodos, sheet_name="Periodo")
         except Exception as e:
@@ -225,7 +231,7 @@ def main():
         aulas_interactivas = df_salones[df_salones['Tipo'] == 'Aula Interactiva LID'].set_index('Aulas').to_dict('index')
         auditorios = df_salones[df_salones['Tipo'] == 'Auditorio'].set_index('Aulas').to_dict('index')
         ambientes = [aulas, laboratorios, aulas_interactivas, auditorios]
-        
+
         # Procesar datos de profesores
         profesores_por_semestre_CodNom = df_profesores.set_index('Código')['Profesor'].to_dict()
 
@@ -248,7 +254,6 @@ def main():
             # Convertir los genes a un DataFrame
             df_cromosoma = pd.DataFrame(mejor_cromosoma.genes).T.reset_index()
             df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
-
             # Ajustar los datos de las horas
             for id, filas in df_cromosoma.iterrows():
                 id_periodo1 = filas['Hora de Teoría']
@@ -262,7 +267,6 @@ def main():
                 hora_de_inicio = filaHoraT['Hora_Inicio']
                 dia = filaHoraT['Día']
                 df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
-
             # Mostrar lista de cursos que llevará el estudiante en el ciclo actual en la sidebar
             st.sidebar.markdown("### Cursos que llevarás en el ciclo actual:")
             for index, row in df_cromosoma.iterrows():
@@ -270,8 +274,6 @@ def main():
 
             # Visualizar el horario óptimo
             visualizar_horario(df_cromosoma, df_periodos)
-
-
     else:
         st.error("Debes iniciar sesión para ver el contenido.")
 
