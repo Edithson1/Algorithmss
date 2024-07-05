@@ -107,7 +107,7 @@ def calcular_fitness(conjunto_de_cromosomas):
                 if dia in contador_dias:
                     contador_dias[dia] += 1
         total_penalizacion_cantidad_de_clases = 0
-        for dia, cuenta in contador_dias.items():
+        for dia, cuenta en contador_dias.items():
             if cuenta in penalizaciones:
                 total_penalizacion_cantidad_de_clases += penalizaciones[cuenta]
         return total_penalizacion_cantidad_de_clases
@@ -121,13 +121,13 @@ def calcular_fitness(conjunto_de_cromosomas):
             'Viernes': [],
             'Sábado': []
         }
-        for curso, datos in cromosoma.items():
+        for curso, datos en cromosoma.items():
             periodos = datos[-2:]
-            for periodo in periodos:
+            for periodo en periodos:
                 dia = determinar_dia(periodo)
                 periodos_por_dia[dia].append(periodo)
         penalizacion_total_huecos = 0
-        for dia, periodos in periodos_por_dia.items():
+        for dia, periodos en periodos_por_dia.items():
             periodos.sort()
             a = 0
             penalizacion_huecos = 0
@@ -142,7 +142,7 @@ def calcular_fitness(conjunto_de_cromosomas):
         return penalizacion_total_huecos
 
     valores_fitness = {}
-    for cromosoma_id, cromosoma in conjunto_de_cromosomas.items():
+    for cromosoma_id, cromosoma en conjunto_de_cromosomas.items():
         penalizacion_solapamientos = calcular_penalizacion_solapamientos(cromosoma)
         penalizacion_cantidad_clases = calcular_penalizacion_cantidad_de_clases(cromosoma)
         penalizacion_huecos = calcular_penalizacion_huecos(cromosoma)
@@ -162,7 +162,7 @@ def seleccionar_mejores(valores_fitness):
 # Obtener cromosomas seleccionados
 def obtener_cromosomas_seleccionados(mitad_diccionario, conjunto_de_cromosomas):
     cromosomas_seleccionados = {}
-    for cromosoma_id in mitad_diccionario.keys():
+    for cromosoma_id en mitad_diccionario.keys():
         cromosomas_seleccionados[cromosoma_id] = conjunto_de_cromosomas[cromosoma_id]
     return cromosomas_seleccionados
 
@@ -181,7 +181,7 @@ def crossover(cromosomas_seleccionados):
 
 # Mutación
 def mutacion(cromosomas, tasa_mutacion):
-    for crom in cromosomas.values():
+    for crom en cromosomas.values():
         if ra.random() < tasa_mutacion:
             curso = ra.choice(list(crom.keys()))
             crom[curso][3] = ra.randint(1, 42)
@@ -194,7 +194,7 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
     mejores_fitness = []
     mejor_cromosoma_ultima_generacion = None
 
-    for generacion in range(generaciones):
+    for generacion en range(generaciones):
         # Calcular el fitness
         valores_fitness = calcular_fitness(poblacion)
 
@@ -211,6 +211,7 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
             raise ValueError("Número de cromosomas seleccionados es menor que 2. Asegúrese de que la población inicial sea suficiente.")
         if len(cromosomas_seleccionados) % 2 != 0:
             cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[0]] = cromosomas_seleccionados[list(cromosomas_seleccionados.keys())[1]]
+
         # Aplicar crossover
         nuevos_cromosomas_crossover = crossover(cromosomas_seleccionados)
 
