@@ -131,17 +131,21 @@ def main():
         st.title("Horario de Matrícula")
 
         # Cargar los datos necesarios
-        file_path_cursos = os.path.join(os.path.dirname(__file__), 'CursosInformatica-Hito2.xlsx')
-        df_cursos = pd.read_excel(file_path_cursos, sheet_name="Hito2")
+        try:
+            file_path_cursos = os.path.join(os.path.dirname(__file__), 'CursosInformatica-Hito2.xlsx')
+            df_cursos = pd.read_excel(file_path_cursos, sheet_name="Hito2")
 
-        file_path_salones = os.path.join(os.path.dirname(__file__), 'ModelarSalones.xlsx')
-        df_salones = pd.read_excel(file_path_salones)
+            file_path_salones = os.path.join(os.path.dirname(__file__), 'ModelarSalones.xlsx')
+            df_salones = pd.read_excel(file_path_salones)
 
-        file_path_profesores = os.path.join(os.path.dirname(__file__), 'asignaturas_con_profesores.xlsx')
-        df_profesores = pd.read_excel(file_path_profesores)
+            file_path_profesores = os.path.join(os.path.dirname(__file__), 'asignaturas_con_profesores.xlsx')
+            df_profesores = pd.read_excel(file_path_profesores)
 
-        file_path_periodos = os.path.join(os.path.dirname(__file__), 'Asignaciones.xlsx')
-        df_periodos = pd.read_excel(file_path_periodos, sheet_name="Periodo")
+            file_path_periodos = os.path.join(os.path.dirname(__file__), 'Asignaciones.xlsx')
+            df_periodos = pd.read_excel(file_path_periodos, sheet_name="Periodo")
+        except Exception as e:
+            st.error(f"Error al cargar los archivos: {e}")
+            return
 
         # Procesar datos de salones
         aulas = df_salones[df_salones['Tipo'] == 'Aula'].set_index('Aulas').to_dict('index')
@@ -182,8 +186,7 @@ def main():
                 filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo2].squeeze()
                 hora_de_inicio = filaHoraT['Hora_Inicio']
                 dia = filaHoraT['Día']
-                df_cromosoma.loc[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
-
+                df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
             # Visualizar el horario
             visualizar_horario(df_cromosoma, df_periodos)
 
