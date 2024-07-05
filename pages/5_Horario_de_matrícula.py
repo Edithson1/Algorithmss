@@ -191,16 +191,20 @@ def mutacion(cromosomas, tasa_mutacion):
 # Algoritmo genético
 def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_semestre, ambientes):
     poblacion = generar_poblacion_inicial(tamano_poblacion, cursos, profesores_por_semestre, ambientes)
+    mejores_fitness = []
+    mejor_cromosoma_ultima_generacion = None
 
     for generacion in range(generaciones):
         # Calcular el fitness
         valores_fitness = calcular_fitness(poblacion)
 
         # Seleccionar los mejores
-        mejores = seleccionar_mejores(valores_fitness)
-        # Obtener cromosomas seleccionados
-        cromosomas_seleccionados = obtener_cromosomas_seleccionados(mejores, poblacion)
+        mitad_diccionario = seleccionar_mejores(valores_fitness)
+        mejor_fitness = next(iter(mitad_diccionario.values()))
+        mejores_fitness.append(mejor_fitness)
 
+        # Obtener cromosomas seleccionados
+        cromosomas_seleccionados = obtener_cromosomas_seleccionados(mitad_diccionario, poblacion)
         # Verificar que el número de cromosomas seleccionados sea par
         if len(cromosomas_seleccionados) < 2:
             raise ValueError("Número de cromosomas seleccionados es menor que 2. Asegúrese de que la población inicial sea suficiente.")
@@ -212,7 +216,43 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
 
         # Aplicar mutación
         poblacion = mutacion(nuevos_cromosomas_crossover, 0.01)
-    return poblacion
+
+        # Almacenar el mejor cromosoma de la última generación
+        if generacion == generaciones - 1:
+            mejor_cromosoma_ultima_generacion = next(iter(cromosomas_seleccionados.values()))
+    return poblacion, mejores_fitness, mejor_cromosoma_ultima_generacion
+def periodo_a_dia_hora(periodo):
+    dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    horas = ['07:00 - 09:00', '09:00 - 11:00', '11:00 - 13:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
+
+    dia = dias[(periodo - 1) // 7]
+    hora = horas[(periodo - 1) % 7]
+
+    return dia, hora
+
+def crear_horario_dataframe(mejor_cromosoma):
+    dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']
+    horas = ['07:00 - 09:00', '09:00 - 11:00', '11:00 - 13:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
+
+    # Crear un DataFrame vacío
+    df = pd.DataFrame(index=horas, columns=dias)
+
+    # Llenar el DataFrame con la información de los cursos
+    for curso, datos in mejor_cromosoma.items():
+        profesor = datos[0]
+        aula1, aula2 = datos[1], datos[2]
+        periodo1, periodo2 = datos[3], datos[4]
+
+        for periodo, aula in [(periodo1, aula1), (periodo2, aula2)]:
+            dia, hora = periodo_a_dia_hora(periodo)
+            info = f"{curso}\n{profesor}\n{aula}"
+
+            if pd.isna(df.at[hora, dia]):
+                df.at[hora, dia] = info
+            else:
+                df.at[hora, dia] += f"\n\n{info}"
+
+    return df
 
 def main():
     if autenticacion_usuario():
@@ -258,61 +298,17 @@ def main():
             cursos_ciclo_actual = df_cursos[df_cursos['Ciclo'] == ciclo_actual]
 
             # Ejecutar el algoritmo genético
-            tamano_poblacion = 100
-            generaciones = 10
-            poblacion_final = algoritmo_genetico(tamano_poblacion, generaciones, cursos_ciclo_actual.set_index('Código').T.to_dict('list'), profesores_por_semestre_CodNom, ambientes)
+            tamano_poblacion = 500
+            generaciones = 30
+            poblacion_final, mejores_fitness, mejor_cromosoma = algoritmo_genetico(tamano_poblacion, generaciones, cursos_ciclo_actual.set_index('Código').T.to_dict('list'), profesores_por_semestre_CodNom, ambientes)
 
-            # Seleccionar el mejor cromosoma (el primero de la lista final de población)
-            mejor_cromosoma = list(poblacion_final.values())[0]
-
-            # Convertir los genes a un DataFrame
-            df_cromosoma = pd.DataFrame(mejor_cromosoma).T.reset_index()
-            df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
-
-            # Ajustar los datos de las horas
-            for id, filas in df_cromosoma.iterrows():
-                id_periodo1 = filas['Hora de Teoría']
-                filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo1].squeeze()
-                hora_de_inicio = filaHoraT['Hora_Inicio']
-                dia = filaHoraT['Día']
-                df_cromosoma.at[id, 'Hora de Teoría'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
-
-                id_periodo2 = filas['Hora de Práctica']
-                filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo2].squeeze()
-                hora_de_inicio = filaHoraT['Hora_Inicio']
-                dia = filaHoraT['Día']
-                df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
+            # Crear el DataFrame del horario
+            df_horario = crear_horario_dataframe(mejor_cromosoma)
 
             # Mostrar el horario detallado en la pestaña principal
             st.write("### Horario del Ciclo Actual")
             st.write("Este es el horario generado para tus cursos del ciclo actual:")
 
-            horario_detallado = []
-
-            for _, row in df_cromosoma.iterrows():
-                curso = row['Curso']
-                docente = row['Docente']
-                nombre_curso = df_cursos.loc[df_cursos['Código'] == curso, 'Nombre'].values
-                if len(nombre_curso) > 0:
-                    nombre_curso = nombre_curso[0]
-                else:
-                    nombre_curso = "Nombre de curso no encontrado"
-                hora_teoria = row['Hora de Teoría']
-                hora_practica = row['Hora de Práctica']
-                aula_teoria = row['Aula de Teoría']
-                aula_practica = row['Aula de Práctica']
-
-                horario_detallado.append({
-                    'Código del Curso': curso,
-                    'Nombre del Curso': nombre_curso,
-                    'Docente': docente,
-                    'Hora de Teoría': hora_teoria,
-                    'Aula de Teoría': aula_teoria,
-                    'Hora de Práctica': hora_practica,
-                    'Aula de Práctica': aula_practica
-                })
-
-            df_horario = pd.DataFrame(horario_detallado)
             st.dataframe(df_horario)
     else:
         st.error("Debes iniciar sesión para ver el contenido.")
