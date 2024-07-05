@@ -121,18 +121,18 @@ def calcular_fitness(conjunto_de_cromosomas):
             'Viernes': [],
             'Sábado': []
         }
-        for curso, datos en cromosoma.items():
+        for curso, datos in cromosoma.items():
             periodos = datos[-2:]
-            for periodo en periodos:
+            for periodo in periodos:
                 dia = determinar_dia(periodo)
                 periodos_por_dia[dia].append(periodo)
         penalizacion_total_huecos = 0
-        for dia, periodos en periodos_por_dia.items():
+        for dia, periodos in periodos_por_dia.items():
             periodos.sort()
             a = 0
             penalizacion_huecos = 0
             penalizacion_extensiones = 0
-            for i en range(len(periodos) - 1):
+            for i in range(len(periodos) - 1):
                 gap_size = periodos[i + 1] - periodos[i] - 1
                 if gap_size > 0:
                     penalizacion_huecos += (-15 * a) - 15
@@ -142,7 +142,7 @@ def calcular_fitness(conjunto_de_cromosomas):
         return penalizacion_total_huecos
 
     valores_fitness = {}
-    for cromosoma_id, cromosoma en conjunto_de_cromosomas.items():
+    for cromosoma_id, cromosoma in conjunto_de_cromosomas.items():
         penalizacion_solapamientos = calcular_penalizacion_solapamientos(cromosoma)
         penalizacion_cantidad_clases = calcular_penalizacion_cantidad_de_clases(cromosoma)
         penalizacion_huecos = calcular_penalizacion_huecos(cromosoma)
@@ -162,7 +162,7 @@ def seleccionar_mejores(valores_fitness):
 # Obtener cromosomas seleccionados
 def obtener_cromosomas_seleccionados(mitad_diccionario, conjunto_de_cromosomas):
     cromosomas_seleccionados = {}
-    for cromosoma_id en mitad_diccionario.keys():
+    for cromosoma_id in mitad_diccionario.keys():
         cromosomas_seleccionados[cromosoma_id] = conjunto_de_cromosomas[cromosoma_id]
     return cromosomas_seleccionados
 
@@ -170,7 +170,7 @@ def obtener_cromosomas_seleccionados(mitad_diccionario, conjunto_de_cromosomas):
 def crossover(cromosomas_seleccionados):
     nuevos_cromosomas = {}
     ids = list(cromosomas_seleccionados.keys())
-    for i en range(0, len(ids), 2):
+    for i in range(0, len(ids), 2):
         if i+1 < len(ids):
             padre1, padre2 = cromosomas_seleccionados[ids[i]], cromosomas_seleccionados[ids[i+1]]
             hijo1_genes = {**padre1, **padre2}
@@ -181,7 +181,7 @@ def crossover(cromosomas_seleccionados):
 
 # Mutación
 def mutacion(cromosomas, tasa_mutacion):
-    for crom en cromosomas.values():
+    for crom in cromosomas.values():
         if ra.random() < tasa_mutacion:
             curso = ra.choice(list(crom.keys()))
             crom[curso][3] = ra.randint(1, 42)
@@ -192,7 +192,7 @@ def mutacion(cromosomas, tasa_mutacion):
 def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_semestre, ambientes):
     poblacion = generar_poblacion_inicial(tamano_poblacion, cursos, profesores_por_semestre, ambientes)
 
-    for generacion en range(generaciones):
+    for generacion in range(generaciones):
         # Calcular el fitness
         valores_fitness = calcular_fitness(poblacion)
 
@@ -213,7 +213,6 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
         # Aplicar mutación
         poblacion = mutacion(nuevos_cromosomas_crossover, 0.01)
     return poblacion
-
 
 def main():
     if autenticacion_usuario():
@@ -250,7 +249,7 @@ def main():
         # Procesar datos de profesores
         profesores_por_semestre_CodNom = df_profesores.set_index('Código')['Profesor'].to_dict()
 
-        if "nombre" en st.session_state and "ciclo_actual" en st.session_state and "cursos_aprobados" en st.session_state:
+        if "nombre" in st.session_state and "ciclo_actual" in st.session_state and "cursos_aprobados" in st.session_state:
             st.write(f"Ciclo actual: {st.session_state['ciclo_actual']}")
 
             ciclo_actual = st.session_state['ciclo_actual']
@@ -271,7 +270,7 @@ def main():
             df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
 
             # Ajustar los datos de las horas
-            for id, filas en df_cromosoma.iterrows():
+            for id, filas indf_cromosoma.iterrows():
                 id_periodo1 = filas['Hora de Teoría']
                 filaHoraT = df_periodos.loc[df_periodos['ID'] == id_periodo1].squeeze()
                 hora_de_inicio = filaHoraT['Hora_Inicio']
@@ -290,7 +289,7 @@ def main():
 
             horario_detallado = []
 
-            for _, row en df_cromosoma.iterrows():
+            for _, row indf_cromosoma.iterrows():
                 curso = row['Curso']
                 docente = row['Docente']
                 nombre_curso = df_cursos.loc[df_cursos['Código'] == curso, 'Nombre'].values
