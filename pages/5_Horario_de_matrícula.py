@@ -108,7 +108,7 @@ def calcular_fitness(conjunto_de_cromosomas):
                     contador_dias[dia] += 1
         total_penalizacion_cantidad_de_clases = 0
         for dia, cuenta in contador_dias.items():
-            if cuenta en penalizaciones:
+            if cuenta in penalizaciones:
                 total_penalizacion_cantidad_de_clases += penalizaciones[cuenta]
         return total_penalizacion_cantidad_de_clases
 
