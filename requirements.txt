@@ -1,0 +1,14 @@
+streamlit
+folium
+streamlit_folium
+plotly
+numpy
+pandas
+matplotlib
+Pillow
+openpyxl
+geopandas
+shapely
+networkx
+pyvis
+streamlit-lottie
