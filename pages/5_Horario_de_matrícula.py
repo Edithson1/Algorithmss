@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import random as ra
-import plotly.express as px
 import os
 from login import autenticacion_usuario
 
@@ -60,12 +59,15 @@ def generar_poblacion_inicial(tamano_poblacion, cursos, profesores_por_semestre,
 # Función de fitness
 def calcular_fitness(cromosoma):
     penalizacion = 0
-    # Añadir lógica de penalización aquí
+    horarios = []
+    for curso, datos in cromosoma.genes.items():
+        if datos[3] in horarios or datos[4] in horarios:
+            penalizacion += 1
+        horarios.extend([datos[3], datos[4]])
     return penalizacion
 
 # Selección de mejores cromosomas
 def seleccionar_mejores(valores_fitness):
-    # Selección basada en el valor de fitness
     valores_fitness.sort(key=lambda x: x[1])
     return valores_fitness[:len(valores_fitness)//2]
 
@@ -92,7 +94,6 @@ def crossover(cromosomas):
 def mutacion(cromosomas, tasa_mutacion):
     for crom in cromosomas:
         if ra.random() < tasa_mutacion:
-            # Realizar mutación en los genes del cromosoma
             curso = ra.choice(list(crom.genes.keys()))
             crom.genes[curso][3] = ra.randint(1, 42)
             crom.genes[curso][4] = ra.randint(1, 42)
@@ -124,84 +125,6 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
 
     return poblacion
 
-# Función para preparar datos para el gráfico
-def preparar_datos(df, periodos_df):
-    dias_a_fechas = {
-        "Lunes": "2024-01-02",
-        "Martes": "2024-01-03",
-        "Miércoles": "2024-01-04",
-        "Jueves": "2024-01-05",
-        "Viernes": "2024-01-06",
-        "Sábado": "2024-01-07",
-        "Domingo": "2024-01-08"
-    }
-
-    eventos = []
-
-    for _, fila in df.iterrows():
-        curso = fila['Curso']
-        docente = fila['Docente']
-        aula_teoria = fila['Aula de Teoría']
-        aula_practica = fila['Aula de Práctica']
-        hora_teoria = fila['Hora de Teoría']
-        hora_practica = fila['Hora de Práctica']
-
-        dia_teoria, tiempo_teoria = hora_teoria.split(": ")
-        inicio_teoria, fin_teoria = tiempo_teoria.split(" - ")
-        dia_practica, tiempo_practica = hora_practica.split(": ")
-        inicio_practica, fin_practica = tiempo_practica.split(" - ")
-
-        eventos.append({
-            'Curso': curso,
-            'Docente': docente,
-            'Aula': aula_teoria,
-            'Inicio': f"{dias_a_fechas[dia_teoria]} {inicio_teoria}:00",
-            'Fin': f"{dias_a_fechas[dia_teoria]} {fin_teoria}:00",
-            'Tipo': 'Teoría'
-        })
-
-        eventos.append({
-            'Curso': curso,
-            'Docente': docente,
-            'Aula': aula_practica,
-            'Inicio': f"{dias_a_fechas[dia_practica]} {inicio_practica}:00",
-            'Fin': f"{dias_a_fechas[dia_practica]} {fin_practica}:00",
-            'Tipo': 'Práctica'
-        })
-
-    return pd.DataFrame(eventos)
-
-# Función para visualizar el horario
-def visualizar_horario(df, periodos_df):
-    df_eventos = preparar_datos(df, periodos_df)
-
-    colores_curso = px.colors.qualitative.Light24[:df_eventos["Curso"].nunique()]
-    color_map = {curso: colores_curso[i % len(colores_curso)] for i, curso in enumerate(df_eventos["Curso"].unique())}
-
-    fig = px.timeline(
-        df_eventos,
-        x_start="Inicio",
-        x_end="Fin",
-        y="Curso",
-        color="Curso",
-        color_discrete_map=color_map,
-        title="Horario",
-        hover_data=["Docente", "Aula"],
-        labels={"Inicio": "Hora de Inicio", "Fin": "Hora de Fin"}
-    )
-
-    fig.update_yaxes(categoryorder="total ascending")
-    fig.update_layout(
-        xaxis_title="Hora",
-        yaxis_title="Curso",
-        xaxis=dict(
-            tickformat="%a %H:%M"
-        ),
-        title_x=0.5
-    )
-
-    st.plotly_chart(fig)
-
 def main():
     if autenticacion_usuario():
         st.title("Horario de Matrícula")
@@ -210,6 +133,7 @@ def main():
         if 'df' not in st.session_state:
             st.error("Primero carga el Plan de Estudios en la página 'Subir Plan de Estudios'")
             return
+        
         # Cargar los datos necesarios
         try:
             df_cursos = st.session_state['df']
@@ -225,6 +149,7 @@ def main():
         except Exception as e:
             st.error(f"Error al cargar los archivos: {e}")
             return
+
         # Procesar datos de salones
         aulas = df_salones[df_salones['Tipo'] == 'Aula'].set_index('Aulas').to_dict('index')
         laboratorios = df_salones[df_salones['Tipo'] == 'Laboratorio'].set_index('Aulas').to_dict('index')
@@ -254,6 +179,7 @@ def main():
             # Convertir los genes a un DataFrame
             df_cromosoma = pd.DataFrame(mejor_cromosoma.genes).T.reset_index()
             df_cromosoma.columns = ['Curso', 'Docente', 'Aula de Teoría', 'Aula de Práctica', 'Hora de Teoría', 'Hora de Práctica']
+
             # Ajustar los datos de las horas
             for id, filas in df_cromosoma.iterrows():
                 id_periodo1 = filas['Hora de Teoría']
@@ -267,13 +193,31 @@ def main():
                 hora_de_inicio = filaHoraT['Hora_Inicio']
                 dia = filaHoraT['Día']
                 df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
-            # Mostrar lista de cursos que llevará el estudiante en el ciclo actual en la sidebar
-            st.sidebar.markdown("### Cursos que llevarás en el ciclo actual:")
-            for index, row in df_cromosoma.iterrows():
-                st.sidebar.write(f"- **{row['Curso']}**: {row['Docente']} ({row['Hora de Teoría']}, {row['Hora de Práctica']})")
+            # Mostrar el horario detallado en la pestaña principal
+            st.write("### Horario del Ciclo Actual")
+            st.write("Este es el horario generado para tus cursos del ciclo actual:")
+            horario_detallado = []
+            for _, row in df_cromosoma.iterrows():
+                curso = row['Curso']
+                docente = row['Docente']
+                nombre_curso = df_cursos.loc[df_cursos['Código'] == curso, 'Nombre'].values[0]
+                hora_teoria = row['Hora de Teoría']
+                hora_practica = row['Hora de Práctica']
+                aula_teoria = row['Aula de Teoría']
+                aula_practica = row['Aula de Práctica']
 
-            # Visualizar el horario óptimo
-            visualizar_horario(df_cromosoma, df_periodos)
+                horario_detallado.append({
+                    'Código del Curso': curso,
+                    'Nombre del Curso': nombre_curso,
+                    'Docente': docente,
+                    'Hora de Teoría': hora_teoria,
+                    'Aula de Teoría': aula_teoria,
+                    'Hora de Práctica': hora_practica,
+                    'Aula de Práctica': aula_practica
+                })
+
+            df_horario = pd.DataFrame(horario_detallado)
+            st.dataframe(df_horario)
     else:
         st.error("Debes iniciar sesión para ver el contenido.")
 
