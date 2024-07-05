@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-from login import autenticacion_usuario
 import random as ra
 import plotly.express as px
 import os
+from login import autenticacion_usuario
 
 # Configuración de página
 st.set_page_config(
@@ -190,16 +190,16 @@ def main():
                 hora_de_inicio = filaHoraT['Hora_Inicio']
                 dia = filaHoraT['Día']
                 df_cromosoma.at[id, 'Hora de Práctica'] = f'{dia}: {hora_de_inicio} - {hora_de_inicio + 2}'
-
-            # Mostrar lista de cursos que llevará el estudiante
+           # Mostrar lista de cursos que llevará el estudiante en el ciclo actual en la sidebar
             st.sidebar.markdown("### Cursos que llevarás en el ciclo actual:")
             for index, row in df_cromosoma.iterrows():
                 st.sidebar.write(f"- **{row['Curso']}**: {row['Docente']}")
 
-            # Visualizar el horario
+            # Visualizar el horario óptimo
             visualizar_horario(df_cromosoma, df_periodos)
     else:
         st.error("Debes iniciar sesión para ver el contenido.")
 
 if __name__ == "__main__":
     main()
+
