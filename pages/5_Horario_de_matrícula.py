@@ -155,7 +155,7 @@ def calcular_fitness(conjunto_de_cromosomas):
 # Selección de mejores cromosomas
 def seleccionar_mejores(valores_fitness):
     valores_fitness_ordenados = dict(sorted(valores_fitness.items(), key=lambda item: item[1], reverse=True))
-    mitad = len(valores_fitness_ordenados) // 2
+    mitad = max(len(valores_fitness_ordenados) // 2, 2)  # Asegúrese de que al menos dos cromosomas sean seleccionados
     mitad_diccionario = dict(list(valores_fitness_ordenados.items())[:mitad])
     return mitad_diccionario
 
@@ -200,7 +200,8 @@ def algoritmo_genetico(tamano_poblacion, generaciones, cursos, profesores_por_se
         mejores = seleccionar_mejores(valores_fitness)
 
         # Obtener cromosomas seleccionados
-        cromosomas_selecccionados = obtener_cromosomas_seleccionados(mejores, poblacion)
+        cromosomas_seleccionados = obtener_cromosomas_seleccionados(mejores, poblacion)
+
         # Verificar que el número de cromosomas seleccionados sea par
         if len(cromosomas_seleccionados) < 2:
             raise ValueError("Número de cromosomas seleccionados es menor que 2. Asegúrese de que la población inicial sea suficiente.")
