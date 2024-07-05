@@ -12,3 +12,4 @@ shapely
 networkx
 pyvis
 streamlit-lottie
+plotly.express
